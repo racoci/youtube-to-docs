@@ -4,7 +4,7 @@ import colorsys
 import glob
 from odf.opendocument import OpenDocumentText
 from odf.text import P, Span
-from odf.style import Style, TextProperties, PageLayout, PageLayoutProperties
+from odf.style import Style, TextProperties, PageLayout, PageLayoutProperties, MasterPage
 
 
 # Function to calculate duodeciles
@@ -17,9 +17,9 @@ def calculate_duodeciles(durations):
 # Function to interpolate color based on duration and probability
 def interpolate_color(duration, probability, duodeciles):
     position = np.searchsorted(duodeciles, duration) / len(duodeciles)
-    hue = position
+    hue = probability/3
     saturation = 1
-    value = probability
+    value = 2/3 + position/3
     rgb = colorsys.hsv_to_rgb(hue, saturation, value)
     return '#{:02x}{:02x}{:02x}'.format(int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
 
@@ -29,7 +29,18 @@ for file_name in glob.glob('*transcription.json'):
     with open(file_name, 'r', encoding='utf-8') as file:
         transcription_data = json.load(file)
 
+    # Create a new ODT document
     doc = OpenDocumentText()
+
+    # Define a page layout with a dark grey background
+    page_layout = PageLayout(name="MyPageLayout")
+    page_layout_properties = PageLayoutProperties(backgroundcolor="#000000")  # Dark grey color
+    page_layout.addElement(page_layout_properties)
+    doc.automaticstyles.addElement(page_layout)
+
+    # Create a master page that uses the page layout
+    master_page = MasterPage(name="Standard", pagelayoutname=page_layout)
+    doc.masterstyles.addElement(master_page)
     durations = [word['end'] - word['start'] for segment in transcription_data['segments'] for word in segment['words']]
     duodeciles = calculate_duodeciles(durations)
 
